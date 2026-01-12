@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universe - Game Instructions</title>
+    <style>
+        body {
+            background: linear-gradient(to bottom, #1a1a2e, #0f0f1e);
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #00ff00;
+            text-align: center;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #00ff00;
+            margin-bottom: 10px;
+        }
+        h2 {
+            color: #00dd00;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 5px;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #00cc00;
+            margin-top: 20px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #00cc00;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+        .section {
+            background: rgba(0, 50, 0, 0.3);
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .historical {
+            background: rgba(50, 50, 0, 0.2);
+            border-left: 4px solid #ffff00;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        ul, ol {
+            margin-left: 20px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        .command {
+            background: rgba(0, 100, 0, 0.3);
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ff6600;
+            font-weight: bold;
+        }
+        .tip {
+            color: #00ffff;
+            font-style: italic;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #00ff00;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: rgba(0, 100, 0, 0.5);
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 10px 20px;
+            background: #006600;
+            color: #00ff00;
+            text-decoration: none;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .back-link:hover {
+            background: #008800;
+            box-shadow: 0 0 15px #00ff00;
+        }
+    </style>
+</head>
+<body>
+    <h1>★ UNIVERSE ★</h1>
+    <p class="subtitle">A Classic Star Trek Space Combat Game</p>
+
+    <div class="section historical">
+        <h2>📜 Historical Background</h2>
+        <p>The <strong>Universe</strong> game (also known as <strong>Star Trek</strong> or <strong>Super Star Trek</strong>) has its origins in the golden age of mainframe computing during the late 1960s and early 1970s.</p>
+        
+        <h3>The Original Game (1971-1974)</h3>
+        <p>The first Star Trek game was created in 1971 by <strong>Mike Mayfield</strong> and written in BASIC for the Sigma 7 mainframe computer at the University of California, Irvine. The game was inspired by the original Star Trek television series (1966-1969) and the strategic board game "Battleship."</p>
+        
+        <ul>
+            <li><strong>1971:</strong> Mike Mayfield creates the original Star Trek game in BASIC</li>
+            <li><strong>1972-1973:</strong> The game spreads across university mainframes via DECUS (Digital Equipment Computer Users' Society)</li>
+            <li><strong>1974:</strong> David H. Ahl publishes "Super Star Trek" in his book "101 BASIC Computer Games"</li>
+            <li><strong>1975-1980s:</strong> Countless variations appear on PDP-11, VAX, Honeywell Multics, and other systems</li>
+        </ul>
+
+        <h3>The Mainframe Era</h3>
+        <p>During the 1970s, this game was played on timesharing systems at universities and research institutions worldwide:</p>
+        <ul>
+            <li><strong>PDP-11 and VAX systems</strong> running RSTS/E, RSX-11, and VMS</li>
+            <li><strong>Honeywell Multics</strong> at institutions like MIT and the University of Calgary</li>
+            <li><strong>IBM mainframes</strong> running TSO and VM/CMS</li>
+            <li><strong>HP 2000 and 3000</strong> timesharing systems</li>
+            <li><strong>IP Sharp APL systems</strong> with APL-based variants</li>
+        </ul>
+
+        <h3>Cultural Impact</h3>
+        <p>Star Trek/Universe became one of the most popular computer games of the 1970s, introducing an entire generation to computer gaming. It demonstrated that computers could provide entertainment beyond calculations, and its text-based interface made it accessible on terminals with limited graphics capabilities.</p>
+        
+        <p class="tip">💡 This modern graphical version recreates the classic gameplay with a Millennium Falcon-inspired cockpit interface, bringing the retro mainframe experience to the web!</p>
+    </div>
+
+    <div class="section">
+        <h2>🎯 Mission Objective</h2>
+        <p>You are the captain of the <strong>USS ENTERPRISE</strong>, the Federation's most advanced starship. Your mission is to eliminate all Klingon warships threatening Federation space before your stardates run out.</p>
+        
+        <p class="warning">⚠️ WARNING: The Klingons will fire back! Manage your shields and energy carefully.</p>
+    </div>
+
+    <div class="section">
+        <h2>🎮 Game Controls</h2>
+        
+        <h3>Navigation</h3>
+        <ul>
+            <li><span class="command">↑ UP</span> - Move ship north (decrease sector row)</li>
+            <li><span class="command">↓ DOWN</span> - Move ship south (increase sector row)</li>
+            <li><span class="command">← LEFT</span> - Move ship west (decrease sector column)</li>
+            <li><span class="command">→ RIGHT</span> - Move ship east (increase sector column)</li>
+        </ul>
+        <p class="tip">💡 Tip: Moving to the edge of a sector will automatically warp you to the adjacent quadrant.</p>
+
+        <h3>Weapons Systems</h3>
+        <ul>
+            <li><span class="command">FIRE PHASERS</span> - Energy weapon with adjustable power (50-500 units)
+                <ul>
+                    <li>Use the power slider to set phaser strength</li>
+                    <li>Damage decreases with distance</li>
+                    <li>Consumes energy from ship's reserves</li>
+                </ul>
+            </li>
+            <li><span class="command">PHOTON TORPEDOES</span> - Powerful projectile weapons
+                <ul>
+                    <li>Click directional buttons (N, S, E, W) to fire</li>
+                    <li>Limited supply (starts with 10)</li>
+                    <li>Travels in straight line until hitting target or edge</li>
+                    <li>Instant destruction on direct hit</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>Sensors & Scanners</h3>
+        <ul>
+            <li><span class="command">SHORT RANGE SCAN</span> - Shows all entities in current quadrant
+                <ul>
+                    <li>Reveals Klingons, starbases, and stars</li>
+                    <li>Updates tactical display</li>
+                    <li>Low energy cost</li>
+                </ul>
+            </li>
+            <li><span class="command">LONG RANGE SCAN</span> - Shows adjacent quadrants
+                <ul>
+                    <li>Displays Klingon count in surrounding 8 quadrants</li>
+                    <li>Helps plan strategic movement</li>
+                    <li>Moderate energy cost</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>Ship Systems</h3>
+        <ul>
+            <li><span class="command">SHIELDS</span> - Protective energy barrier
+                <ul>
+                    <li>Enter amount to allocate from ship's energy</li>
+                    <li>Absorbs enemy fire</li>
+                    <li>Shields regenerate slowly when not under attack</li>
+                </ul>
+            </li>
+            <li><span class="command">DOCK AT STARBASE</span> - Repair and resupply
+                <ul>
+                    <li>Must be adjacent to a starbase (blue "B")</li>
+                    <li>Fully restores energy, shields, and torpedoes</li>
+                    <li>Repairs all damage</li>
+                    <li>Use strategically when low on resources</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🗺️ Understanding the Display</h2>
+        
+        <h3>Tactical Grid (10×10 Sector View)</h3>
+        <table>
+            <tr>
+                <th>Symbol</th>
+                <th>Meaning</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td style="color: #00ff00;">◆ (Green)</td>
+                <td>Your Ship</td>
+                <td>USS ENTERPRISE - your position in the sector</td>
+            </tr>
+            <tr>
+                <td style="color: #ff0000;">K (Red)</td>
+                <td>Klingon Warship</td>
+                <td>Enemy vessel - destroy on sight!</td>
+            </tr>
+            <tr>
+                <td style="color: #00ffff;">B (Blue)</td>
+                <td>Starbase</td>
+                <td>Federation outpost - dock here to repair</td>
+            </tr>
+            <tr>
+                <td style="color: #ffff00;">* (Yellow)</td>
+                <td>Star</td>
+                <td>Obstacle - cannot move through</td>
+            </tr>
+            <tr>
+                <td>· (Gray)</td>
+                <td>Empty Space</td>
+                <td>Safe to navigate</td>
+            </tr>
+        </table>
+
+        <h3>HUD Information</h3>
+        <ul>
+            <li><strong>Quadrant:</strong> Your current position in the 8×8 galaxy grid</li>
+            <li><strong>Sector:</strong> Your position within the current quadrant (0-9, 0-9)</li>
+            <li><strong>Energy:</strong> Ship's power reserves (used for movement, weapons, shields)</li>
+            <li><strong>Shields:</strong> Defensive barrier strength</li>
+            <li><strong>Torpedoes:</strong> Remaining photon torpedo count</li>
+            <li><strong>Klingons:</strong> Total enemy ships remaining in galaxy</li>
+            <li><strong>Stardates:</strong> Time remaining to complete mission</li>
+            <li><strong>Score:</strong> Points earned (100 per Klingon destroyed)</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>💡 Strategy & Tips</h2>
+        
+        <h3>Combat Tactics</h3>
+        <ol>
+            <li><strong>Maintain Distance:</strong> Phaser damage decreases with range. Get close for maximum effect.</li>
+            <li><strong>Use Torpedoes Wisely:</strong> Save torpedoes for distant targets or when energy is low.</li>
+            <li><strong>Shield Management:</strong> Raise shields before entering quadrants with Klingons.</li>
+            <li><strong>Energy Conservation:</strong> Every action costs energy. Plan your moves carefully.</li>
+        </ol>
+
+        <h3>Exploration Strategy</h3>
+        <ol>
+            <li><strong>Use Long Range Scan:</strong> Scout ahead to avoid entering heavily defended quadrants.</li>
+            <li><strong>Find Starbases Early:</strong> Locate repair facilities before engaging in heavy combat.</li>
+            <li><strong>Clear Systematically:</strong> Work through the galaxy methodically rather than randomly.</li>
+            <li><strong>Watch Your Stardates:</strong> Don't waste time - each move consumes time.</li>
+        </ol>
+
+        <h3>Resource Management</h3>
+        <ul>
+            <li><strong>Energy Priority:</strong> Shields > Weapons > Movement</li>
+            <li><strong>Dock Frequently:</strong> Don't wait until critically damaged</li>
+            <li><strong>Phaser Efficiency:</strong> Lower power settings work fine at close range</li>
+            <li><strong>Torpedo Conservation:</strong> You only get 10 - make them count!</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🏆 Winning & Losing</h2>
+        
+        <h3>Victory Conditions</h3>
+        <p>Destroy all Klingon warships in the galaxy before your stardates expire. Your final score is based on:</p>
+        <ul>
+            <li>Klingons destroyed (100 points each)</li>
+            <li>Remaining stardates (bonus for efficiency)</li>
+            <li>Remaining energy and torpedoes</li>
+        </ul>
+
+        <h3>Defeat Conditions</h3>
+        <ul>
+            <li><span class="warning">Ship Destroyed:</span> Energy reaches zero while under attack</li>
+            <li><span class="warning">Time Expired:</span> Stardates run out before mission complete</li>
+            <li><span class="warning">Stranded:</span> Insufficient energy to reach a starbase</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🎓 Historical Gameplay Notes</h2>
+        <p>This modern version preserves the core mechanics of the 1970s original while adding visual enhancements:</p>
+        <ul>
+            <li><strong>Real-time Combat:</strong> Klingons fire back immediately (original was turn-based)</li>
+            <li><strong>Graphical Display:</strong> Visual grid replaces ASCII text output</li>
+            <li><strong>Mouse Controls:</strong> Buttons replace typed commands</li>
+            <li><strong>Animated Effects:</strong> Starfield and glowing HUD elements</li>
+        </ul>
+        
+        <p class="tip">💡 In the original 1971 version, players typed commands like "NAV", "PHA", "TOR", and "SRS" at a teletype terminal. This version brings that classic experience to the modern web!</p>
+    </div>
+
+    <div style="text-align: center;">
+        <a href="/cockpit" class="back-link">▶ ENTER COCKPIT</a>
+        <a href="/" class="back-link">◀ BACK TO HOME</a>
+    </div>
+
+    <div style="text-align: center; margin-top: 40px; color: #006600; font-size: 0.9em;">
+        <p>Based on the classic Star Trek game by Mike Mayfield (1971)</p>
+        <p>Modernized with Phoenix LiveView & Elixir</p>
+        <p style="margin-top: 20px;">Live Long and Prosper 🖖</p>
+    </div>
+</body>
+</html>

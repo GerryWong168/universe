@@ -42,6 +42,7 @@ defmodule Universe.MixProject do
     [
       {:pbkdf2_elixir, "~> 2.0"},
       {:swoosh, "~> 1.16"},
+      {:hackney, "~> 1.9"},
       {:phoenix, "~> 1.8.1"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.13"},
