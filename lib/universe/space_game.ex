@@ -25,7 +25,6 @@ defmodule Universe.SpaceGame do
   @initial_energy 3000
   @initial_torpedoes 10
   @initial_shields 0
-  @initial_stardates 30
 
   def new_game do
     galaxy = generate_galaxy()
@@ -44,7 +43,10 @@ defmodule Universe.SpaceGame do
       klingons_remaining: total_klingons,
       stardates_remaining: trunc(total_klingons * 2.5),
       score: 0,
-      messages: ["Welcome to the USS Enterprise, Captain!", "Your mission: eliminate all Klingon warships."],
+      messages: [
+        "Welcome to the USS Enterprise, Captain!",
+        "Your mission: eliminate all Klingon warships."
+      ],
       current_quadrant: %{}
     }
     |> refresh_quadrant()
@@ -112,24 +114,38 @@ defmodule Universe.SpaceGame do
     add_message(game, "Long range sensors: #{format_scan(scan_results)}")
   end
 
-  def raise_shields(game, amount) when amount >= 0 do
+  def raise_shields(game, amount) when amount >= 0 and amount <= 1000 do
     current_shields = game.shields
-    total_available = game.energy + current_shields
+    shield_diff = amount - current_shields
+    energy_cost = trunc(shield_diff * 0.5)
 
     cond do
-      amount > total_available ->
-        add_message(game, "Insufficient energy! Available: #{total_available}")
+      shield_diff > 0 and game.energy < energy_cost ->
+        add_message(
+          game,
+          "Insufficient energy! Need #{energy_cost} energy for #{shield_diff} shields."
+        )
 
-      true ->
-        energy_needed = amount - current_shields
+      shield_diff < 0 ->
+        # Lowering shields returns energy
+        energy_returned = trunc(abs(shield_diff) * 0.5)
+
         game
         |> Map.put(:shields, amount)
-        |> Map.put(:energy, game.energy - energy_needed)
+        |> Map.put(:energy, game.energy + energy_returned)
+        |> add_message("Deflector shields lowered to #{amount} units")
+
+      true ->
+        # Raising shields costs energy
+        game
+        |> Map.put(:shields, amount)
+        |> Map.put(:energy, game.energy - energy_cost)
         |> add_message("Deflector shields set to #{amount} units")
     end
   end
 
-  def raise_shields(game, _amount), do: add_message(game, "Invalid shield setting!")
+  def raise_shields(game, _amount),
+    do: add_message(game, "Invalid shield setting! Must be 0-1000.")
 
   def warp_to_quadrant(game, target_qx, target_qy) do
     # Validate coordinates
@@ -153,7 +169,10 @@ defmodule Universe.SpaceGame do
         time_cost = max(0.5, 0.5 * distance)
 
         if game.energy < energy_cost do
-          add_message(game, "Insufficient energy for warp! Required: #{energy_cost}, Available: #{game.energy}")
+          add_message(
+            game,
+            "Insufficient energy for warp! Required: #{energy_cost}, Available: #{game.energy}"
+          )
         else
           game
           |> Map.put(:quadrant_x, target_qx)
@@ -163,7 +182,9 @@ defmodule Universe.SpaceGame do
           |> use_energy(energy_cost)
           |> use_stardate(time_cost)
           |> refresh_quadrant()
-          |> add_message("Warp drive engaged! Warped to quadrant #{target_qx},#{target_qy} (Distance: #{Float.round(distance, 1)}, Energy: #{energy_cost}, Time: #{Float.round(time_cost, 1)})")
+          |> add_message(
+            "Warp drive engaged! Warped to quadrant #{target_qx},#{target_qy} (Distance: #{Float.round(distance, 1)}, Energy: #{energy_cost}, Time: #{Float.round(time_cost, 1)})"
+          )
         end
     end
   end
@@ -171,8 +192,10 @@ defmodule Universe.SpaceGame do
   def dock_at_starbase(game) do
     if starbase_adjacent?(game) do
       game
-      |> Map.put(:energy, 3000)  # 100% energy
-      |> Map.put(:torpedoes, 10)  # 100% torpedoes
+      # 100% energy
+      |> Map.put(:energy, 3000)
+      # 100% torpedoes
+      |> Map.put(:torpedoes, 10)
       |> Map.put(:shields, 0)
       |> add_message("Docked! All systems repaired and resupplied.")
     else
@@ -205,7 +228,29 @@ defmodule Universe.SpaceGame do
 
   defp refresh_quadrant(game) do
     quadrant = generate_quadrant(game.galaxy, game.quadrant_x, game.quadrant_y)
-    Map.put(game, :current_quadrant, quadrant)
+    game = Map.put(game, :current_quadrant, quadrant)
+
+    # Check for Klingons and activate red alert shields
+    klingon_count = count_entities(quadrant, :klingon)
+
+    if klingon_count > 0 do
+      # Red Alert! Auto-activate shields
+      target_shields = if game.energy >= 250, do: 500, else: trunc(game.energy * 2)
+      energy_cost = trunc((target_shields - game.shields) * 0.5)
+
+      if energy_cost > 0 and game.energy >= energy_cost do
+        game
+        |> Map.put(:shields, target_shields)
+        |> Map.put(:energy, game.energy - energy_cost)
+        |> add_message(
+          "RED ALERT! #{klingon_count} Klingon warship(s) detected! Shields raised to #{target_shields}."
+        )
+      else
+        add_message(game, "RED ALERT! #{klingon_count} Klingon warship(s) detected!")
+      end
+    else
+      game
+    end
   end
 
   defp generate_quadrant(galaxy, qx, qy) do
@@ -221,16 +266,20 @@ defmodule Universe.SpaceGame do
   end
 
   defp add_entities(list, _type, 0, _health), do: list
+
   defp add_entities(list, type, count, health) when count > 0 do
-    new_entities = for _ <- 1..count do
-      pos = find_empty_position(list)
-      {pos, %{type: type, health: health}}
-    end
+    new_entities =
+      for _ <- 1..count do
+        pos = find_empty_position(list)
+        {pos, %{type: type, health: health}}
+      end
+
     list ++ new_entities
   end
 
   defp find_empty_position(existing) do
     pos = {:rand.uniform(@quadrant_size), :rand.uniform(@quadrant_size)}
+
     if Enum.any?(existing, fn {p, _} -> p == pos end) do
       find_empty_position(existing)
     else
@@ -240,6 +289,7 @@ defmodule Universe.SpaceGame do
 
   defp find_safe_starting_quadrant(galaxy) do
     safe = Enum.find(galaxy, fn {{_x, _y}, data} -> data.klingons == 0 end)
+
     case safe do
       {{x, y}, _} -> {x, y}
       nil -> {1, 1}
@@ -267,8 +317,8 @@ defmodule Universe.SpaceGame do
     new_qy = game.quadrant_y + if dy != 0, do: div(dy, abs(dy)), else: 0
 
     if new_qx >= 1 and new_qx <= @galaxy_size and new_qy >= 1 and new_qy <= @galaxy_size do
-      new_sx = if dx < 0, do: @quadrant_size, else: (if dx > 0, do: 1, else: game.sector_x)
-      new_sy = if dy < 0, do: @quadrant_size, else: (if dy > 0, do: 1, else: game.sector_y)
+      new_sx = if dx < 0, do: @quadrant_size, else: if(dx > 0, do: 1, else: game.sector_x)
+      new_sy = if dy < 0, do: @quadrant_size, else: if(dy > 0, do: 1, else: game.sector_y)
 
       game
       |> Map.put(:quadrant_x, new_qx)
@@ -292,7 +342,8 @@ defmodule Universe.SpaceGame do
     ship_pos = {game.sector_x, game.sector_y}
 
     {updated_quadrant, hits, kills} =
-      Enum.reduce(klingons, {game.current_quadrant, 0, 0}, fn {{kx, ky}, klingon}, {quad, hit_count, kill_count} ->
+      Enum.reduce(klingons, {game.current_quadrant, 0, 0}, fn {{kx, ky}, klingon},
+                                                              {quad, hit_count, kill_count} ->
         distance = calculate_distance(ship_pos, {kx, ky})
         damage = trunc(power / distance)
         new_health = klingon.health - damage
@@ -319,6 +370,7 @@ defmodule Universe.SpaceGame do
     case trace_torpedo_path(start_pos, {dx, dy}, game.current_quadrant) do
       {:hit, :klingon, pos} ->
         updated_quadrant = Map.delete(game.current_quadrant, pos)
+
         game
         |> Map.put(:current_quadrant, updated_quadrant)
         |> update_galaxy_klingon_count(1)
@@ -339,8 +391,12 @@ defmodule Universe.SpaceGame do
     new_y = y + dy
 
     cond do
-      steps > @quadrant_size * 2 -> {:miss}
-      new_x < 1 or new_x > @quadrant_size or new_y < 1 or new_y > @quadrant_size -> {:miss}
+      steps > @quadrant_size * 2 ->
+        {:miss}
+
+      new_x < 1 or new_x > @quadrant_size or new_y < 1 or new_y > @quadrant_size ->
+        {:miss}
+
       true ->
         case Map.get(quadrant, {new_x, new_y}) do
           %{type: :klingon} -> {:hit, :klingon, {new_x, new_y}}
@@ -356,10 +412,11 @@ defmodule Universe.SpaceGame do
     if Enum.empty?(klingons) do
       game
     else
-      total_damage = Enum.reduce(klingons, 0, fn {{kx, ky}, _}, acc ->
-        distance = calculate_distance({game.sector_x, game.sector_y}, {kx, ky})
-        acc + trunc(50 / distance)
-      end)
+      total_damage =
+        Enum.reduce(klingons, 0, fn {{kx, ky}, _}, acc ->
+          distance = calculate_distance({game.sector_x, game.sector_y}, {kx, ky})
+          acc + trunc(50 / distance)
+        end)
 
       absorbed = min(total_damage, game.shields)
       hull_damage = total_damage - absorbed
@@ -377,6 +434,7 @@ defmodule Universe.SpaceGame do
 
   defp update_galaxy_klingon_count(game, kills) when kills > 0 do
     quadrant_key = {game.quadrant_x, game.quadrant_y}
+
     Map.update!(game, :galaxy, fn galaxy ->
       Map.update!(galaxy, quadrant_key, fn quadrant_data ->
         Map.update!(quadrant_data, :klingons, &max(0, &1 - kills))
@@ -388,6 +446,7 @@ defmodule Universe.SpaceGame do
 
   defp starbase_adjacent?(game) do
     ship_pos = {game.sector_x, game.sector_y}
+
     Enum.any?(game.current_quadrant, fn {pos, entity} ->
       entity.type == :starbase and calculate_distance(ship_pos, pos) <= 1.5
     end)
@@ -397,6 +456,7 @@ defmodule Universe.SpaceGame do
     for dx <- -1..1, dy <- -1..1, dx != 0 or dy != 0 do
       qx = game.quadrant_x + dx
       qy = game.quadrant_y + dy
+
       if qx >= 1 and qx <= @galaxy_size and qy >= 1 and qy <= @galaxy_size do
         data = game.galaxy[{qx, qy}]
         {{qx, qy}, data}

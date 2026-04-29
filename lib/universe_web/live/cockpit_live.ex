@@ -22,15 +22,20 @@ defmodule UniverseWeb.CockpitLive do
     game = SpaceGame.move_ship(socket.assigns.game, direction)
 
     # Check if ship is now on starbase and auto-resupply
-    game = if at_starbase?(game) do
-      game
-      |> Map.put(:energy, 3000)  # 100% energy
-      |> Map.put(:torpedoes, 10)  # 100% torpedoes
-      |> Map.put(:shields, 0)
-      |> Map.update!(:messages, fn msgs -> ["Docked! All systems repaired and resupplied." | msgs] |> Enum.take(10) end)
-    else
-      game
-    end
+    game =
+      if at_starbase?(game) do
+        game
+        # 100% energy
+        |> Map.put(:energy, 3000)
+        # 100% torpedoes
+        |> Map.put(:torpedoes, 10)
+        |> Map.put(:shields, 0)
+        |> Map.update!(:messages, fn msgs ->
+          ["Docked! All systems repaired and resupplied." | msgs] |> Enum.take(10)
+        end)
+      else
+        game
+      end
 
     {:noreply, assign(socket, :game, game)}
   end
@@ -40,9 +45,10 @@ defmodule UniverseWeb.CockpitLive do
     game = socket.assigns.game
 
     # Find all Klingon positions in current quadrant
-    klingon_positions = game.current_quadrant
-                        |> Enum.filter(fn {_, entity} -> entity.type == :klingon end)
-                        |> Enum.map(fn {pos, _} -> pos end)
+    klingon_positions =
+      game.current_quadrant
+      |> Enum.filter(fn {_, entity} -> entity.type == :klingon end)
+      |> Enum.map(fn {pos, _} -> pos end)
 
     # Update game state
     updated_game = SpaceGame.fire_phasers(game, socket.assigns.selected_power)
@@ -55,6 +61,45 @@ defmodule UniverseWeb.CockpitLive do
      |> assign(:game, updated_game)
      |> assign(:ship_firing, true)
      |> assign(:targets_hit, klingon_positions)}
+  end
+
+  @impl true
+  def handle_event("navigate_by_click", %{"x" => x, "y" => y}, socket) do
+    {x_int, _} = Integer.parse(x)
+    {y_int, _} = Integer.parse(y)
+
+    direction =
+      cond do
+        y_int < 4 -> "up"
+        y_int > 7 -> "down"
+        x_int < 4 -> "left"
+        x_int > 7 -> "right"
+        true -> nil
+      end
+
+    if direction do
+      game = SpaceGame.move_ship(socket.assigns.game, direction)
+
+      # Check if ship is now on starbase and auto-resupply
+      game =
+        if at_starbase?(game) do
+          game
+          # 100% energy
+          |> Map.put(:energy, 3000)
+          # 100% torpedoes
+          |> Map.put(:torpedoes, 10)
+          |> Map.put(:shields, 0)
+          |> Map.update!(:messages, fn msgs ->
+            ["Docked! All systems repaired and resupplied." | msgs] |> Enum.take(10)
+          end)
+        else
+          game
+        end
+
+      {:noreply, assign(socket, :game, game)}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
@@ -134,6 +179,7 @@ defmodule UniverseWeb.CockpitLive do
   @impl true
   def handle_event("new_game", _params, socket) do
     game = SpaceGame.new_game()
+
     {:noreply,
      socket
      |> assign(:game, game)
@@ -159,20 +205,21 @@ defmodule UniverseWeb.CockpitLive do
             <.viewport game={@game} ship_firing={@ship_firing} targets_hit={@targets_hit} />
           </div>
 
-          <div class="hud-overlay">
-            <.hud_top game={@game} />
-          </div>
+          <div class="hud-overlay"></div>
         </div>
 
         <div class="control-panels">
           <div class="top-row">
-            <.systems_controls game={@game} />
+            <.systems_and_weapons_controls game={@game} selected_power={@selected_power} />
             <.status_display game={@game} />
           </div>
 
           <div class="bottom-row">
-            <.weapons_controls selected_power={@selected_power} game={@game} />
-            <.message_log messages={@game.messages} />
+            <.message_log
+              messages={@game.messages}
+              klingons={@game.klingons_remaining}
+              stardates={@game.stardates_remaining}
+            />
           </div>
         </div>
       </div>
@@ -189,15 +236,24 @@ defmodule UniverseWeb.CockpitLive do
     <div class="viewport" id="warp-coords-hook" phx-hook="WarpCoords">
       <div class="starfield">
         <%= for _ <- 1..100 do %>
-          <div class="star" style={"left: #{:rand.uniform(100)}%; top: #{:rand.uniform(100)}%; animation-delay: #{:rand.uniform(3)}s;"}></div>
+          <div
+            class="star"
+            style={"left: #{:rand.uniform(100)}%; top: #{:rand.uniform(100)}%; animation-delay: #{:rand.uniform(3)}s;"}
+          >
+          </div>
         <% end %>
       </div>
 
       <div class="sector-grid" id="tactical-grid">
         <%= for y <- 1..10 do %>
           <%= for x <- 1..10 do %>
-            <div class={"grid-cell #{cell_class(@game, x, y)} #{highlight_class(@game, x, y, @ship_firing, @targets_hit)}"}>
-              <%= render_entity(@game, x, y) %>
+            <div
+              class={"grid-cell #{cell_class(@game, x, y)} #{highlight_class(@game, x, y, @ship_firing, @targets_hit)}"}
+              phx-click="navigate_by_click"
+              phx-value-x={x}
+              phx-value-y={y}
+            >
+              {render_entity(@game, x, y)}
             </div>
           <% end %>
         <% end %>
@@ -229,15 +285,17 @@ defmodule UniverseWeb.CockpitLive do
   end
 
   defp grid_to_percent_x(coord) do
-    # X axis: center at 50%, reduce spread further (was 1 square too wide each side)
-    # New multiplier ~2.6, base = 50 - 5.5 * 2.6 = 35.7
-    35.7 + coord * 2.6
+    # For medium screens (768px - 1199px): fixed 500px viewport
+    # Grid starts at 50px, each cell is 40px, cell center is +20px
+    # Convert to percentage: (50 + (coord - 1) * 40 + 20) / 500 * 100
+    (50 + (coord - 1) * 40 + 20) / 500 * 100
   end
 
   defp grid_to_percent_y(coord) do
-    # Y axis: original calculation works for vertical
-    # Grid is 418px in 500px viewport height
-    3.8 + coord * 8.4
+    # For medium screens (768px - 1199px): fixed 500px viewport
+    # Grid starts at 50px, each cell is 40px, cell center is +20px
+    # Convert to percentage: (50 + (coord - 1) * 40 + 20) / 500 * 100
+    (50 + (coord - 1) * 40 + 20) / 500 * 100
   end
 
   defp highlight_class(game, x, y, ship_firing, targets_hit) do
@@ -248,20 +306,92 @@ defmodule UniverseWeb.CockpitLive do
     end
   end
 
-  defp hud_top(assigns) do
+  defp systems_and_weapons_controls(assigns) do
+    at_starbase = at_starbase?(assigns.game)
+    near_starbase = near_starbase?(assigns.game)
+    assigns = assign(assigns, :at_starbase, at_starbase) |> assign(:near_starbase, near_starbase)
+
     ~H"""
-    <div class="hud-top">
-      <div class="hud-left">
-        <div class="hud-item">
-          <span class="hud-label">QUADRANT</span>
-          <span class="hud-value"><%= @game.quadrant_x %>,<%= @game.quadrant_y %></span>
+    <div class="panel-section systems-weapons">
+      <h3 class="panel-title">Weapons</h3>
+
+      <div class="widgets-row">
+        <div class="widget-phasers">
+          <div class="widget-title">PHASERS</div>
+           <label class="control-label">Power</label>
+          <.form for={%{}} phx-change="set_power" class="power-form">
+            <input
+              type="range"
+              min="50"
+              max="500"
+              value={@selected_power}
+              name="power"
+              class="power-slider"
+            />
+          </.form>
+           <span class="power-value">{@selected_power}</span>
+          <button phx-click="fire_phasers" class="fire-btn phaser-btn">FIRE</button>
         </div>
-        <div class="hud-item">
-          <span class="hud-label">SECTOR</span>
-          <span class="hud-value"><%= @game.sector_x %>,<%= @game.sector_y %></span>
+
+        <div class="widget-torpedoes">
+          <div class="widget-title">TORPEDOES</div>
+           <label class="control-label">Count: {@game.torpedoes}</label>
+          <div class="torpedo-grid">
+            <button phx-click="fire_torpedo" phx-value-direction="up" class="torpedo-btn">↑</button>
+            <div class="torpedo-row">
+              <button phx-click="fire_torpedo" phx-value-direction="left" class="torpedo-btn">
+                ←
+              </button>
+              <button phx-click="fire_torpedo" phx-value-direction="right" class="torpedo-btn">
+                →
+              </button>
+            </div>
+
+            <button phx-click="fire_torpedo" phx-value-direction="down" class="torpedo-btn">↓</button>
+          </div>
         </div>
-        <div class="hud-tactical">
-          <div class="hud-tactical-title">TACTICAL</div>
+      </div>
+
+      <div class="dock-section">
+        <%= if @at_starbase do %>
+          <div class="docked-indicator"><span class="dock-icon">🏭</span> DOCKED</div>
+        <% else %>
+          <%= if @near_starbase do %>
+            <button phx-click="dock" class="system-btn">DOCK AT STARBASE</button>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+    """
+  end
+
+  defp navigation_controls(assigns) do
+    ~H"""
+    <div class="panel-section navigation-panel">
+      <h3 class="panel-title">NAVIGATION</h3>
+
+      <div class="nav-grid">
+        <button phx-click="move" phx-value-direction="up" class="nav-btn nav-up">↑</button>
+        <div class="nav-row">
+          <button phx-click="move" phx-value-direction="left" class="nav-btn nav-left">←</button>
+          <div class="nav-center">MOVE</div>
+           <button phx-click="move" phx-value-direction="right" class="nav-btn nav-right">→</button>
+        </div>
+         <button phx-click="move" phx-value-direction="down" class="nav-btn nav-down">↓</button>
+      </div>
+    </div>
+    """
+  end
+
+  defp status_display(assigns) do
+    ~H"""
+    <div class="panel-section status-display">
+      <h3 class="panel-title">Systems</h3>
+
+      <div class="widgets-row">
+        <div class="widget-tactical">
+          <div class="widget-title">Long Range Scanner</div>
+
           <div class="hud-mini-map">
             <%= for y <- 1..8 do %>
               <%= for x <- 1..8 do %>
@@ -275,108 +405,87 @@ defmodule UniverseWeb.CockpitLive do
                   <%= if x == @game.quadrant_x and y == @game.quadrant_y do %>
                     <span class="hud-mini-ship">E</span>
                   <% else %>
-                    <%= mini_quadrant_info(@game, x, y) %>
+                    {mini_quadrant_info(@game, x, y)}
                   <% end %>
                 </button>
               <% end %>
             <% end %>
           </div>
-        </div>
-      </div>
 
-      <div class="hud-center">
-        <div class="ship-name">USS ENTERPRISE</div>
-      </div>
-
-      <div class="hud-right">
-        <div class="hud-item">
-          <span class="hud-label">KLINGONS</span>
-          <span class="hud-value alert"><%= @game.klingons_remaining %></span>
-        </div>
-        <div class="hud-item">
-          <span class="hud-label">STARDATES</span>
-          <span class="hud-value"><%= :erlang.float_to_binary(@game.stardates_remaining * 1.0, decimals: 1) %></span>
-        </div>
-        <div class="hud-item">
-          <span class="hud-label">SCORE</span>
-          <span class="hud-value score"><%= @game.score %></span>
-        </div>
-        <div class="hud-navigation">
-          <div class="nav-grid">
-            <button phx-click="move" phx-value-direction="up" class="nav-btn nav-up">↑</button>
-            <div class="nav-row">
-              <button phx-click="move" phx-value-direction="left" class="nav-btn nav-left">←</button>
-              <div class="nav-center">MOVE</div>
-              <button phx-click="move" phx-value-direction="right" class="nav-btn nav-right">→</button>
-            </div>
-            <button phx-click="move" phx-value-direction="down" class="nav-btn nav-down">↓</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  defp weapons_controls(assigns) do
-    ~H"""
-    <div class="panel-section weapons">
-      <h3 class="panel-title">WEAPONS</h3>
-
-      <div class="weapons-grid">
-        <div class="weapon-control phaser-control">
-          <label class="control-label">Phaser Power</label>
-          <.form for={%{}} phx-change="set_power" class="power-form">
-            <input
-              type="range"
-              min="50"
-              max="500"
-              value={@selected_power}
-              name="power"
-              class="power-slider"
-            />
-          </.form>
-          <span class="power-value"><%= @selected_power %></span>
-          <button phx-click="fire_phasers" class="fire-btn phaser-btn">FIRE PHASERS</button>
-        </div>
-
-        <div class="weapon-control torpedo-control">
-          <label class="control-label">Torpedoes: <%= @game.torpedoes %></label>
-          <div class="torpedo-grid">
-            <button phx-click="fire_torpedo" phx-value-direction="up" class="torpedo-btn">↑</button>
-            <div class="torpedo-row">
-              <button phx-click="fire_torpedo" phx-value-direction="left" class="torpedo-btn">←</button>
-              <button phx-click="fire_torpedo" phx-value-direction="right" class="torpedo-btn">→</button>
-            </div>
-            <button phx-click="fire_torpedo" phx-value-direction="down" class="torpedo-btn">↓</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
-
-  defp status_display(assigns) do
-    ~H"""
-    <div class="panel-section status-display">
-      <h3 class="panel-title">STATUS</h3>
-      <div class="status-row">
-        <div class="status-bar">
-          <span class="status-label">ENERGY</span>
-          <div class="status-bar-content">
-            <div class="bar-container">
-              <div class="bar energy-bar" style={"width: #{energy_percent(@game)}%"}></div>
-            </div>
-            <span class="status-value"><%= @game.energy %></span>
+          <div class="warp-controls">
+            <.form for={%{}} phx-submit="engage_warp" class="warp-form" id="warp-form">
+              <div class="warp-inputs">
+                <input
+                  type="number"
+                  min="1"
+                  max="8"
+                  value={@game.quadrant_x}
+                  name="target_qx"
+                  class="warp-input"
+                  placeholder="X"
+                  id="warp-qx-input"
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max="8"
+                  value={@game.quadrant_y}
+                  name="target_qy"
+                  class="warp-input"
+                  placeholder="Y"
+                  id="warp-qy-input"
+                /> <button type="submit" class="warp-btn">ENGAGE</button>
+              </div>
+            </.form>
           </div>
         </div>
 
-        <div class="status-bar">
-          <span class="status-label">SHIELDS</span>
-          <div class="status-bar-content">
-            <div class="bar-container">
-              <div class="bar shield-bar" style={"width: #{shield_percent(@game)}%"}></div>
+        <div class="widget-status">
+          <div class="widget-title">Status</div>
+
+          <div class="status-row">
+            <div class="status-bar">
+              <span class="status-label">QUADRANT</span>
+              <div class="status-bar-content">
+                <span class="status-value">{@game.quadrant_x},{@game.quadrant_y}</span>
+              </div>
             </div>
-            <span class="status-value"><%= @game.shields %></span>
+
+            <div class="status-bar">
+              <span class="status-label">SECTOR</span>
+              <div class="status-bar-content">
+                <span class="status-value">{@game.sector_x},{@game.sector_y}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="status-row">
+            <div class="status-bar">
+              <span class="status-label">ENERGY</span>
+              <div class="status-bar-content">
+                <div class="bar-container">
+                  <div class="bar energy-bar" style={"width: #{energy_percent(@game)}%"}></div>
+                </div>
+                 <span class="status-value">{@game.energy}</span>
+              </div>
+            </div>
+
+            <div class="status-bar">
+              <span class="status-label">SHIELDS</span>
+              <div class="status-bar-content">
+                <.form for={%{}} phx-change="raise_shields" class="shield-form">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1000"
+                    value={@game.shields}
+                    name="amount"
+                    class="shield-slider"
+                  />
+                </.form>
+                 <span class="status-value">{@game.shields}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -387,76 +496,16 @@ defmodule UniverseWeb.CockpitLive do
   defp message_log(assigns) do
     ~H"""
     <div class="message-log">
-      <h3 class="panel-title">SHIP'S LOG</h3>
+      <h3 class="panel-title">
+        SHIP'S LOG | KLINGONS: {@klingons} | STARDATES: {:erlang.float_to_binary(@stardates * 1.0,
+          decimals: 1
+        )}
+      </h3>
+
       <div class="messages">
         <%= for message <- Enum.take(@messages, 8) do %>
-          <div class="message"><span class="message-prompt">></span> <%= message %></div>
+          <div class="message"><span class="message-prompt">></span> {message}</div>
         <% end %>
-      </div>
-    </div>
-    """
-  end
-
-  defp systems_controls(assigns) do
-    at_starbase = at_starbase?(assigns.game)
-    near_starbase = near_starbase?(assigns.game)
-    assigns = assign(assigns, :at_starbase, at_starbase) |> assign(:near_starbase, near_starbase)
-
-    ~H"""
-    <div class="panel-section systems">
-      <h3 class="panel-title">SYSTEMS</h3>
-      <div class="systems-row">
-        <div class="warp-control">
-          <label class="control-label">WARP DRIVE</label>
-          <.form for={%{}} phx-submit="engage_warp" class="warp-form" id="warp-form">
-            <div class="warp-inputs">
-              <input
-                type="number"
-                min="1"
-                max="8"
-                value={@game.quadrant_x}
-                name="target_qx"
-                class="warp-input"
-                placeholder="X"
-                id="warp-qx-input"
-              />
-              <input
-                type="number"
-                min="1"
-                max="8"
-                value={@game.quadrant_y}
-                name="target_qy"
-                class="warp-input"
-                placeholder="Y"
-                id="warp-qy-input"
-              />
-              <button type="submit" class="warp-btn">ENGAGE</button>
-            </div>
-          </.form>
-        </div>
-        <%= if @at_starbase do %>
-          <div class="docked-indicator">
-            <span class="dock-icon">🏭</span> DOCKED
-          </div>
-        <% else %>
-          <%= if @near_starbase do %>
-            <button phx-click="dock" class="system-btn">DOCK AT STARBASE</button>
-          <% end %>
-        <% end %>
-        <div class="shield-control">
-          <label class="control-label">Shield Level</label>
-          <.form for={%{}} phx-submit="raise_shields" class="shield-form">
-            <input
-              type="number"
-              min="0"
-              max={@game.energy + @game.shields}
-              value={@game.shields}
-              name="amount"
-              class="shield-input"
-              phx-blur="raise_shields"
-            />
-          </.form>
-        </div>
       </div>
     </div>
     """
@@ -464,6 +513,7 @@ defmodule UniverseWeb.CockpitLive do
 
   defp at_starbase?(game) do
     ship_pos = {game.sector_x, game.sector_y}
+
     case Map.get(game.current_quadrant, ship_pos) do
       %{type: :starbase} -> true
       _ -> false
@@ -472,6 +522,7 @@ defmodule UniverseWeb.CockpitLive do
 
   defp near_starbase?(game) do
     ship_pos = {game.sector_x, game.sector_y}
+
     Enum.any?(game.current_quadrant, fn {pos, entity} ->
       entity.type == :starbase and distance(ship_pos, pos) <= 1.5
     end)
@@ -489,13 +540,16 @@ defmodule UniverseWeb.CockpitLive do
     ~H"""
     <div class="modal-overlay">
       <div class={"game-over-modal #{@status}"}>
-        <h2 class="modal-title"><%= if @status == :won, do: "VICTORY!", else: "MISSION FAILED" %></h2>
-        <p class="modal-message"><%= @message %></p>
+        <h2 class="modal-title">{if @status == :won, do: "VICTORY!", else: "MISSION FAILED"}</h2>
+
+        <p class="modal-message">{@message}</p>
+
         <div class="modal-stats">
-          <div>Final Score: <strong><%= @game.score %></strong></div>
-          <div>Klingons Destroyed: <strong><%= count_killed(@game) %></strong></div>
+          <div>Final Score: <strong>{@game.score}</strong></div>
+
+          <div>Klingons Destroyed: <strong>{count_killed(@game)}</strong></div>
         </div>
-        <button phx-click="new_game" class="new-game-btn">NEW MISSION</button>
+         <button phx-click="new_game" class="new-game-btn">NEW MISSION</button>
       </div>
     </div>
     """
@@ -515,7 +569,10 @@ defmodule UniverseWeb.CockpitLive do
         # Check if docked (on same square as starbase)
         case Map.get(game.current_quadrant, {x, y}) do
           %{type: :starbase} ->
-            Phoenix.HTML.raw(~s(<div class="docked-ship">◆</div><div class="docked-starbase">B</div>))
+            Phoenix.HTML.raw(
+              ~s(<div class="docked-ship">◆</div><div class="docked-starbase">B</div>)
+            )
+
           _ ->
             Phoenix.HTML.raw(~s(<div class="ship">◆</div>))
         end
@@ -524,16 +581,26 @@ defmodule UniverseWeb.CockpitLive do
         case Map.get(game.current_quadrant, {x, y}) do
           %{type: :klingon, health: health} ->
             health_percent = health / 100
-            Phoenix.HTML.raw(~s(<div class="klingon-container"><div class="klingon-shield" style="width: #{health_percent * 30}px; height: #{health_percent * 30}px;"></div><div class="klingon">K</div></div>))
-          %{type: :starbase} -> Phoenix.HTML.raw(~s(<div class="starbase">B</div>))
-          %{type: :star} -> Phoenix.HTML.raw(~s(<div class="star-entity">*</div>))
-          _ -> ""
+
+            Phoenix.HTML.raw(
+              ~s(<div class="klingon-container"><div class="klingon-shield" style="width: #{health_percent * 30}px; height: #{health_percent * 30}px;"></div><div class="klingon">K</div></div>)
+            )
+
+          %{type: :starbase} ->
+            Phoenix.HTML.raw(~s(<div class="starbase">B</div>))
+
+          %{type: :star} ->
+            Phoenix.HTML.raw(~s(<div class="star-entity">*</div>))
+
+          _ ->
+            ""
         end
     end
   end
 
   defp mini_cell_class(game, x, y) do
     data = game.galaxy[{x, y}]
+
     cond do
       data.klingons > 0 -> "has-klingons"
       data.starbases > 0 -> "has-starbase"
@@ -547,7 +614,6 @@ defmodule UniverseWeb.CockpitLive do
   end
 
   defp energy_percent(game), do: min(100, trunc(game.energy / 30))
-  defp shield_percent(game), do: min(100, trunc(game.shields / 10))
 
   defp count_killed(game) do
     initial_klingons = Enum.reduce(game.galaxy, 0, fn {_, data}, acc -> acc + data.klingons end)

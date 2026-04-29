@@ -21,7 +21,7 @@ config :universe, UniverseWeb.Endpoint,
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [
     ip: {127, 0, 0, 1},
-    port: String.to_integer(System.get_env("PORT") || "4000"),
+    port: String.to_integer(System.get_env("PORT") || "5000"),
     thousand_island_options: [silent_terminate_on_error: true]
   ],
   check_origin: false,

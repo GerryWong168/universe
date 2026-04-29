@@ -27,12 +27,38 @@
         window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
         
         window.addEventListener("phx:set-theme", (e) => setTheme(e.target.dataset.phxTheme));
+        
+        // Mobile tap support for instructions tooltip
+        document.addEventListener('DOMContentLoaded', () => {
+          if ('ontouchstart' in window) {
+            const instructionsBtn = document.querySelector('footer .group');
+            if (instructionsBtn) {
+              let touchTimer;
+              
+              instructionsBtn.addEventListener('touchstart', (e) => {
+                touchTimer = setTimeout(() => {
+                  const tooltip = instructionsBtn.querySelector('.absolute');
+                  if (tooltip) {
+                    tooltip.classList.toggle('opacity-100');
+                    tooltip.classList.toggle('invisible');
+                    tooltip.classList.toggle('opacity-0');
+                    tooltip.classList.toggle('visible');
+                  }
+                }, 100);
+              });
+              
+              instructionsBtn.addEventListener('touchend', () => {
+                clearTimeout(touchTimer);
+              });
+            }
+          }
+        });
       })();
     </script>
   </head>
   <body>
-    <ul class="menu menu-horizontal w-full relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end">
-      <%= if @current_scope do %>
+    <%= if @current_scope do %>
+      <ul class="menu menu-horizontal w-full relative z-10 flex items-center gap-4 px-4 sm:px-6 lg:px-8 justify-end">
         <li>
           {@current_scope.user.email}
         </li>
@@ -42,12 +68,28 @@
         <li>
           <.link href={~p"/users/log-out"} method="delete">Log out</.link>
         </li>
-      <% else %>
-        <li>
-          <a href="/instructions.html" class="text-green-400 hover:text-green-300">📖 Game Instructions</a>
-        </li>
-      <% end %>
-    </ul>
+      </ul>
+    <% end %>
     {@inner_content}
+    
+    <%= unless @current_scope do %>
+      <footer class="w-full py-6 px-4 sm:px-6 lg:px-8 bg-gray-900 border-t border-green-400 mt-8">
+        <div class="max-w-7xl mx-auto">
+          <div class="relative group inline-block">
+            <a href="/instructions.html" class="text-green-400 hover:text-green-300 font-bold text-lg">
+              📖 Game Instructions
+            </a>
+            <div class="absolute left-0 bottom-full mb-2 w-96 p-4 bg-gray-900 border border-green-400 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div class="text-green-400 text-sm space-y-2">
+                <p><strong>Universe Space Game</strong> - Navigate your ship (◆) through space, destroy all Klingons (K) and dock at starbases (B) to resupply. Click grid cells to move, use Long Range Scanner to warp between quadrants, set phaser power and FIRE, or click torpedo arrows to launch.</p>
+                <p><strong>Quadrant Navigation</strong> - Click the 8x8 Long Range Scanner map to set warp coordinates, then click ENGAGE to jump between quadrants.</p>
+                <p><strong>Torpedo Combat</strong> - Click the directional arrows (↑↓←→) in the Torpedoes widget to fire photon torpedoes that travel straight across the current sector grid.</p>
+              </div>
+            </div>
+          </div>
+          <p class="text-green-600 text-sm mt-2">Hover over instructions for quick help</p>
+        </div>
+      </footer>
+    <% end %>
   </body>
 </html>
