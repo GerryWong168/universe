@@ -25,6 +25,9 @@ defmodule Universe.SpaceGame do
   @initial_energy 3000
   @initial_torpedoes 10
   @initial_shields 0
+  @sol_quadrant {3, 3}
+  @sol_sector {5, 5}
+  @sol_name "Sol"
 
   def new_game do
     galaxy = generate_galaxy()
@@ -203,6 +206,41 @@ defmodule Universe.SpaceGame do
     end
   end
 
+  def at_sol?(game) do
+    {game.quadrant_x, game.quadrant_y} == @sol_quadrant and
+      {game.sector_x, game.sector_y} == @sol_sector
+  end
+
+  def recharge_at_sol(game) do
+    if at_sol?(game) do
+      game
+      |> Map.put(:energy, @initial_energy)
+      |> Map.put(:torpedoes, @initial_torpedoes)
+      |> Map.put(:shields, @initial_shields)
+      |> add_message("Recharged at Sol. Energy and torpedoes restored.")
+    else
+      add_message(game, "Recharge unavailable - set course for Sol in quadrant 3,3 sector 5,5.")
+    end
+  end
+
+  def serialize_state(%__MODULE__{} = game) do
+    game
+    |> :erlang.term_to_binary()
+    |> Base.url_encode64(padding: false)
+  end
+
+  def deserialize_state(encoded) when is_binary(encoded) do
+    with {:ok, binary} <- Base.url_decode64(encoded, padding: false),
+         term <- :erlang.binary_to_term(binary, [:safe]),
+         %__MODULE__{} = game <- term do
+      {:ok, game}
+    else
+      _ -> :error
+    end
+  rescue
+    ArgumentError -> :error
+  end
+
   def game_over?(game) do
     game.energy <= 0 or game.stardates_remaining <= 0 or game.klingons_remaining <= 0
   end
@@ -218,11 +256,20 @@ defmodule Universe.SpaceGame do
 
   defp generate_galaxy do
     for x <- 1..@galaxy_size, y <- 1..@galaxy_size, into: %{} do
-      klingons = if :rand.uniform(100) < 30, do: :rand.uniform(3), else: 0
-      starbases = if :rand.uniform(100) < 10, do: 1, else: 0
-      stars = :rand.uniform(8)
+      {klingons, starbases, stars, solar_system} =
+        if {x, y} == @sol_quadrant do
+          {0, 0, :rand.uniform(8), @sol_name}
+        else
+          {
+            if(:rand.uniform(100) < 30, do: :rand.uniform(3), else: 0),
+            if(:rand.uniform(100) < 10, do: 1, else: 0),
+            :rand.uniform(8),
+            nil
+          }
+        end
 
-      {{x, y}, %{klingons: klingons, starbases: starbases, stars: stars}}
+      {{x, y},
+       %{klingons: klingons, starbases: starbases, stars: stars, solar_system: solar_system}}
     end
   end
 
@@ -258,11 +305,23 @@ defmodule Universe.SpaceGame do
 
     entities =
       []
+      |> add_solar_system(qx, qy)
       |> add_entities(:klingon, quadrant_data.klingons, 100)
       |> add_entities(:starbase, quadrant_data.starbases, 0)
       |> add_entities(:star, quadrant_data.stars, 0)
 
     Enum.into(entities, %{})
+  end
+
+  defp add_solar_system(list, qx, qy) do
+    if {qx, qy} == @sol_quadrant do
+      [
+        {@sol_sector, %{type: :solar_system, name: @sol_name, health: 0}}
+        | list
+      ]
+    else
+      list
+    end
   end
 
   defp add_entities(list, _type, 0, _health), do: list
@@ -308,7 +367,7 @@ defmodule Universe.SpaceGame do
 
   defp collision?(quadrant, x, y) do
     Enum.any?(quadrant, fn {{qx, qy}, entity} ->
-      qx == x and qy == y and entity.type != :starbase
+      qx == x and qy == y and entity.type not in [:starbase, :solar_system]
     end)
   end
 
@@ -469,7 +528,8 @@ defmodule Universe.SpaceGame do
 
   defp format_scan(results) do
     Enum.map_join(results, ", ", fn {{x, y}, data} ->
-      "Q#{x},#{y}: K#{data.klingons} B#{data.starbases} S#{data.stars}"
+      system = if data.solar_system, do: " #{data.solar_system}", else: ""
+      "Q#{x},#{y}: K#{data.klingons} B#{data.starbases} S#{data.stars}#{system}"
     end)
   end
 

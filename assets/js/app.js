@@ -27,8 +27,8 @@ import Hooks from "./hooks"
 import topbar from "../vendor/topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+
 const liveSocket = new LiveSocket("/live", Socket, {
-  longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
   hooks: {...colocatedHooks, ...Hooks},
 })
@@ -55,10 +55,6 @@ window.liveSocket = liveSocket
 //
 if (process.env.NODE_ENV === "development") {
   window.addEventListener("phx:live_reload:attached", ({detail: reloader}) => {
-    // Enable server log streaming to client.
-    // Disable with reloader.disableServerLogs()
-    reloader.enableServerLogs()
-
     // Open configured PLUG_EDITOR at file:line of the clicked element's HEEx component
     //
     //   * click with "c" key pressed to open at caller location
@@ -81,4 +77,3 @@ if (process.env.NODE_ENV === "development") {
     window.liveReloader = reloader
   })
 }
-

@@ -85,7 +85,8 @@ defmodule UniverseWeb do
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components
-      import UniverseWeb.CoreComponents
+      import UniverseWeb.CoreComponents, except: [input: 1, table: 1]
+      import UniverseWeb.CalculatorComponents
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS

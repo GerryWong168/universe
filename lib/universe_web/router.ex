@@ -21,6 +21,7 @@ defmodule UniverseWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    get "/tools", PageController, :tools
   end
 
   # Other scopes may use custom stacks.
@@ -51,6 +52,8 @@ defmodule UniverseWeb.Router do
       live "/users/log-in", UserLive.Login, :new
       live "/users/log-in/:token", UserLive.Confirmation, :new
       live "/cockpit", CockpitLive, :index
+      live "/tools/low-cost-housing-construction-in-mexico", LowCostHousingCalculatorLive, :index
+      live "/tools/tepic-house-calculator", TepicHouseCalculatorLive, :index
     end
 
     post "/users/log-in", UserSessionController, :create

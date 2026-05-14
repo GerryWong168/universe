@@ -33,10 +33,23 @@
   z-index: 1;
 }
 
+.tactical-stage {
+  display: flex;
+  justify-content: center;
+  align-items: start;
+  margin: 0 auto 25px auto;
+}
+
+.tactical-stage.has-sol-actions {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 300px);
+  gap: 20px;
+}
+
 /* Viewport - Main Window */
 .viewport-container {
   position: relative;
-  margin: 0 auto 25px auto;
+  margin: 0;
   border: 2px solid #00ff88;
   border-radius: 12px;
   background: #000;
@@ -306,6 +319,16 @@
   }
 }
 
+.solar-system {
+  color: #ffd166;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-shadow:
+    0 0 12px rgba(255, 209, 102, 0.95),
+    0 0 24px rgba(255, 148, 66, 0.75);
+}
+
 .star-entity {
   position: relative;
   width: 24px;
@@ -495,28 +518,11 @@
 /* Laser Beam SVG Overlay */
 .laser-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
   z-index: 5;
-}
-
-/* Medium screen laser overlay sizing (768px - 1200px) */
-@media (min-width: 768px) and (max-width: 1199px) {
-  .laser-overlay {
-    width: 500px;
-    height: 500px;
-  }
-}
-
-/* Large screen laser overlay sizing (1200px and above) */
-@media (min-width: 1200px) {
-  .laser-overlay {
-    width: 500px;
-    height: 500px;
-  }
 }
 
 .laser-beam {
@@ -534,15 +540,15 @@
 @keyframes laser-pulse {
   0% {
     stroke-opacity: 1;
-    stroke-width: 0.4;
+    stroke-width: 3;
   }
   50% {
     stroke-opacity: 0.8;
-    stroke-width: 0.2;
+    stroke-width: 1.8;
   }
   100% {
     stroke-opacity: 1;
-    stroke-width: 0.4;
+    stroke-width: 3;
   }
 }
 
@@ -1037,6 +1043,16 @@
   border-color: #00aaff;
 }
 
+.hud-mini-cell.has-sol {
+  background: rgba(255, 209, 102, 0.28);
+  border-color: #ffd166;
+  color: #ffe7a3;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  text-shadow: 0 0 6px rgba(255, 209, 102, 0.9);
+}
+
 .hud-mini-ship {
   color: #00ff88;
   font-weight: bold;
@@ -1090,6 +1106,95 @@
     radial-gradient(circle at top left, rgba(0, 255, 136, 0.03) 0%, transparent 50%);
   pointer-events: none;
   border-radius: 10px;
+}
+
+.dashboard-panel {
+  position: relative;
+}
+
+.panel-section.dashboard-panel,
+.message-log.dashboard-panel {
+  padding-top: 52px;
+}
+
+.panel-reference-label {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  max-width: calc(100% - 28px);
+  padding: 5px 10px;
+  border: 1px solid rgba(0, 255, 136, 0.55);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(0, 22, 18, 0.92), rgba(0, 65, 52, 0.72));
+  box-shadow:
+    0 0 12px rgba(0, 255, 136, 0.22),
+    inset 0 0 8px rgba(0, 255, 136, 0.08);
+  color: #9fffd1;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  line-height: 1;
+  pointer-events: none;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.45);
+}
+
+.viewport-container .panel-reference-label {
+  background: linear-gradient(135deg, rgba(0, 10, 12, 0.88), rgba(0, 55, 45, 0.66));
+}
+
+.dashboard-subpanel {
+  position: relative;
+}
+
+.sol-actions-panel {
+  position: relative;
+  min-height: 230px;
+  padding: 52px 18px 18px;
+  border: 2px solid #ffd166;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 209, 102, 0.16), transparent 45%),
+    linear-gradient(135deg, rgba(32, 22, 0, 0.92), rgba(0, 28, 24, 0.88));
+  box-shadow:
+    0 0 26px rgba(255, 209, 102, 0.2),
+    inset 0 0 18px rgba(255, 209, 102, 0.08);
+}
+
+.sol-actions-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sol-actions-kicker {
+  color: #ffd166;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.sol-actions-title {
+  color: #fff2bd;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 0 18px rgba(255, 209, 102, 0.62);
+}
+
+.sol-actions-copy {
+  color: #b9ffe1;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0 0 4px;
+}
+
+.sol-action-btn {
+  width: 100%;
 }
 
 @keyframes panel-border-glow {
@@ -1441,6 +1546,15 @@
 
 /* Responsive Design */
 @media (max-width: 1200px) {
+  .tactical-stage.has-sol-actions {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .sol-actions-panel {
+    width: 500px;
+  }
+
   .top-row {
     grid-template-columns: 1fr;
   }
@@ -1470,6 +1584,14 @@
 @media (max-width: 768px) {
   .cockpit-container {
     padding: 10px;
+  }
+
+  .tactical-stage {
+    gap: 15px;
+  }
+
+  .sol-actions-panel {
+    width: 350px;
   }
 
   .viewport-container {

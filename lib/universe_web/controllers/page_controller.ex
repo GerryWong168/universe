@@ -4,4 +4,8 @@ defmodule UniverseWeb.PageController do
   def home(conn, _params) do
     render(conn, :home)
   end
+
+  def tools(conn, _params) do
+    render(conn, :tools)
+  end
 end

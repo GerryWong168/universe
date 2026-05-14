@@ -6,11 +6,11 @@ defmodule UniverseWeb.UserLive.LoginTest do
 
   describe "login page" do
     test "renders login page", %{conn: conn} do
-      {:ok, _lv, html} = live(conn, ~p"/users/log-in")
+      {:ok, lv, _html} = live(conn, ~p"/users/log-in")
 
-      assert html =~ "Log in"
-      assert html =~ "Register"
-      assert html =~ "Log in with email"
+      assert has_element?(lv, "main", "Log in")
+      assert has_element?(lv, "main a", "Sign up")
+      assert has_element?(lv, "#login_form_magic button", "Log in with email")
     end
   end
 
